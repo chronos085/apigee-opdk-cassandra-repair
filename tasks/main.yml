@@ -1,0 +1,38 @@
+---
+# tasks file for apigee-opdk-extension-ds
+- name: Nodetool cleanup before flush
+  shell: '{{ nodetool }} cleanup'
+  environment:
+    JAVA_HOME: '{{ java_home }}'
+
+- name: Nodetool flush before repair
+  shell: '{{ nodetool }} flush'
+  environment:
+    JAVA_HOME: '{{ java_home }}'
+
+- block:
+  - name: Streaming repair Cassandra nodes
+    shell: '{{ nodetool }} repair -pr'
+    environment:
+      JAVA_HOME: '{{ java_home }}'
+
+  rescue:
+    - name: Cassandra needs a another minute, then retry
+      pause:
+        minutes: 1
+
+    - name: Nodetool flush before repair
+      shell: '{{ nodetool }} flush'
+      environment:
+        JAVA_HOME: '{{ java_home }}'
+
+    - name: Retry streaming nodetool repair, ignoring errors to move on to next node
+      ignore_errors: yes
+      shell: '{{ nodetool }} repair -pr'
+      environment:
+        JAVA_HOME: '{{ java_home }}'
+
+- name: Nodetool flush after repair
+  shell: '{{ nodetool }} flush'
+  environment:
+    JAVA_HOME: '{{ java_home }}'
